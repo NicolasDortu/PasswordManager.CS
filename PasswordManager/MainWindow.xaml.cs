@@ -5,7 +5,6 @@ using System.Text;
 using System.Windows;
 using Microsoft.Data.Sqlite;
 using SQLitePCL;
-using Microsoft.VisualBasic;
 
 namespace PasswordManagerWPF
 {
@@ -22,13 +21,16 @@ namespace PasswordManagerWPF
 
         private void InitializeDatabase()
         {
-            if (!File.Exists("passwords.db"))
-            {
-                using (var connection = new SqliteConnection(connectionString))
-                {
-                    connection.Open();
+            bool isNewDatabase = !File.Exists("passwords.db");
 
-                    var command = connection.CreateCommand();
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var command = connection.CreateCommand();
+                if (isNewDatabase)
+                {
+                    // Create the database schema if it's a new database
                     command.CommandText = @"
                         CREATE TABLE Users (
                             UserID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,19 +45,35 @@ namespace PasswordManagerWPF
                             EncryptedPassword BLOB NOT NULL,
                             FOREIGN KEY(UserID) REFERENCES Users(UserID)
                         );
-
-                        INSERT INTO Users (Username, EncryptedConnectionText) VALUES ('admin', @encryptedConnectionText);
                     ";
-
-                    string connectionText = "You are connected";
-                    string defaultPassword = "admin"; // Change this to set your default main password
-                    byte[] encryptedConnectionText = Encrypt(connectionText, defaultPassword);
-
-                    command.Parameters.AddWithValue("@encryptedConnectionText", encryptedConnectionText);
                     command.ExecuteNonQuery();
                 }
 
-                MessageBox.Show("Database created and initialized. Please use the default password 'admin' to login.");
+                // Check if the EncryptedConnectionText is present
+                command.CommandText = "SELECT EncryptedConnectionText FROM Users WHERE Username = 'admin'";
+                var result = command.ExecuteScalar();
+
+                if (result == null)
+                {
+                    // Prompt user to set a new password
+                    MessageBox.Show("No main password set. Please set a new main password.");
+                    var setPasswordWindow = new SetPasswordWindow();
+                    if (setPasswordWindow.ShowDialog() == true)
+                    {
+                        string newPassword = setPasswordWindow.NewPassword;
+                        string connectionText = "You are connected";
+                        byte[] encryptedConnectionText = Encrypt(connectionText, newPassword);
+
+                        command.CommandText = "INSERT INTO Users (Username, EncryptedConnectionText) VALUES ('admin', @encryptedConnectionText)";
+                        command.Parameters.AddWithValue("@encryptedConnectionText", encryptedConnectionText);
+                        command.ExecuteNonQuery();
+                        MessageBox.Show("Main password set successfully.");
+                    }
+                    else
+                    {
+                        Application.Current.Shutdown();
+                    }
+                }
             }
         }
 
@@ -65,7 +83,9 @@ namespace PasswordManagerWPF
             if (AuthenticateUser(mainPassword))
             {
                 MessageBox.Show("Authentication successful!");
-                OptionsPanel.Visibility = Visibility.Visible;
+                PasswordManagerWindow passwordManagerWindow = new PasswordManagerWindow(mainPassword);
+                passwordManagerWindow.Show();
+                this.Close();
             }
             else
             {
@@ -97,92 +117,27 @@ namespace PasswordManagerWPF
 
         private string Decrypt(byte[] data, string password)
         {
-            using (var aes = Aes.Create())
+            try
             {
-                var key = new Rfc2898DeriveBytes(password, Encoding.UTF8.GetBytes("SaltIsGoodForYou")).GetBytes(32);
-                aes.Key = key;
-                aes.IV = new byte[16];
-
-                using (var decryptor = aes.CreateDecryptor())
+                using (var aes = Aes.Create())
                 {
-                    var result = decryptor.TransformFinalBlock(data, 0, data.Length);
-                    return Encoding.UTF8.GetString(result);
-                }
-            }
-        }
+                    var key = new Rfc2898DeriveBytes(password, Encoding.UTF8.GetBytes("SaltIsGoodForYou")).GetBytes(32);
+                    aes.Key = key;
+                    aes.IV = new byte[16];
 
-        private void GeneratePassword_Click(object sender, RoutedEventArgs e)
-        {
-            string mainPassword = MainPasswordBox.Password;
-            string appName = Interaction.InputBox("Enter the app name:", "App Name", "Default");
-            GenerateAndStorePassword(appName, mainPassword);
-        }
-
-        private void GenerateAndStorePassword(string appName, string mainPassword)
-        {
-            string newPassword = GenerateRandomPassword();
-            byte[] encryptedPassword = Encrypt(newPassword, mainPassword);
-
-            using (var connection = new SqliteConnection(connectionString))
-            {
-                connection.Open();
-                var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO Passwords (UserID, AppName, EncryptedPassword) VALUES (1, @appName, @encryptedPassword)";
-                command.Parameters.AddWithValue("@appName", appName);
-                command.Parameters.AddWithValue("@encryptedPassword", encryptedPassword);
-                command.ExecuteNonQuery();
-            }
-
-            MessageBox.Show($"Generated password for {appName}: {newPassword}");
-        }
-
-        private string GenerateRandomPassword()
-        {
-            const string validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()";
-            StringBuilder res = new StringBuilder();
-            using (RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider())
-            {
-                byte[] uintBuffer = new byte[sizeof(uint)];
-
-                while (res.Length < 16)
-                {
-                    rng.GetBytes(uintBuffer);
-                    uint num = BitConverter.ToUInt32(uintBuffer, 0);
-                    res.Append(validChars[(int)(num % (uint)validChars.Length)]);
-                }
-            }
-
-            return res.ToString();
-        }
-
-        private void ViewPasswords_Click(object sender, RoutedEventArgs e)
-        {
-            string mainPassword = MainPasswordBox.Password;
-            ViewStoredPasswords(mainPassword);
-        }
-
-        private void ViewStoredPasswords(string mainPassword)
-        {
-            using (var connection = new SqliteConnection(connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT AppName, EncryptedPassword FROM Passwords WHERE UserID = 1";
-                using (var reader = command.ExecuteReader())
-                {
-                    PasswordListBox.Items.Clear();
-                    while (reader.Read())
+                    using (var decryptor = aes.CreateDecryptor())
                     {
-                        string appName = reader.GetString(0);
-                        byte[] encryptedPassword = (byte[])reader[1];
-                        string decryptedPassword = Decrypt(encryptedPassword, mainPassword);
-
-                        PasswordListBox.Items.Add($"App: {appName}, Password: {decryptedPassword}");
+                        var result = decryptor.TransformFinalBlock(data, 0, data.Length);
+                        return Encoding.UTF8.GetString(result);
                     }
                 }
             }
+            catch (CryptographicException)
+            {
+                return null;
+            }
         }
+
 
         private byte[] Encrypt(string text, string password)
         {
