@@ -42,12 +42,14 @@ namespace PasswordManagerWPF
                             PasswordID INTEGER PRIMARY KEY AUTOINCREMENT,
                             UserID INTEGER NOT NULL,
                             AppName TEXT NOT NULL,
+                            Login TEXT,
                             EncryptedPassword BLOB NOT NULL,
                             FOREIGN KEY(UserID) REFERENCES Users(UserID)
                         );
                     ";
                     command.ExecuteNonQuery();
                 }
+
 
                 // Check if the EncryptedConnectionText is present
                 command.CommandText = "SELECT EncryptedConnectionText FROM Users WHERE Username = 'admin'";
@@ -74,6 +76,14 @@ namespace PasswordManagerWPF
                         Application.Current.Shutdown();
                     }
                 }
+            }
+        }
+
+        private void PasswordBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                Login_Click(sender, e);
             }
         }
 
@@ -137,7 +147,6 @@ namespace PasswordManagerWPF
                 return null;
             }
         }
-
 
         private byte[] Encrypt(string text, string password)
         {

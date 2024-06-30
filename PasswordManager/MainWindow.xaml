@@ -1,11 +1,19 @@
 ﻿<Window x:Class="PasswordManagerWPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Login" Height="200" Width="300">
+        Title="Login" Height="200" Width="300"
+        WindowStartupLocation="CenterScreen"
+        Icon="Resources/shield.ico">
     <Grid>
+        <Grid.Background>
+            <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                <GradientStop Color="#FF9681D8" Offset="1"/>
+                <GradientStop Color="#FF521FE4" Offset="0"/>
+            </LinearGradientBrush>
+        </Grid.Background>
         <StackPanel Margin="10">
-            <TextBlock Text="Enter your main password:"/>
-            <PasswordBox x:Name="MainPasswordBox" Width="200"/>
+            <TextBlock Text="Enter your main password:" Foreground="White"/>
+            <PasswordBox x:Name="MainPasswordBox" Width="200" Margin="0,10,0,0" KeyDown="PasswordBox_KeyDown" Background="#E5FFFFFF"/>
             <Button Content="Login" Click="Login_Click" Margin="10" Width="200"/>
         </StackPanel>
     </Grid>

@@ -2,6 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using Microsoft.Data.Sqlite;
 
 namespace PasswordManagerWPF
@@ -15,15 +16,41 @@ namespace PasswordManagerWPF
         {
             InitializeComponent();
             mainPassword = password;
+            LoadStoredPasswords();
+        }
+
+        private void LoadStoredPasswords()
+        {
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var command = connection.CreateCommand();
+                command.CommandText = "SELECT PasswordID, AppName FROM Passwords WHERE UserID = 1";
+                using (var reader = command.ExecuteReader())
+                {
+                    PasswordListBox.Items.Clear();
+                    while (reader.Read())
+                    {
+                        var item = new ListBoxItem
+                        {
+                            Content = reader.GetString(reader.GetOrdinal("AppName")),
+                            Tag = reader.GetInt32(reader.GetOrdinal("PasswordID"))
+                        };
+                        PasswordListBox.Items.Add(item);
+                    }
+                }
+            }
         }
 
         private void GeneratePassword_Click(object sender, RoutedEventArgs e)
         {
             string appName = Microsoft.VisualBasic.Interaction.InputBox("Enter the app name:", "App Name", "Default");
-            GenerateAndStorePassword(appName, mainPassword);
+            string login = Microsoft.VisualBasic.Interaction.InputBox("Enter the login (optional):", "Login", "");
+            GenerateAndStorePassword(appName, login, mainPassword);
         }
 
-        private void GenerateAndStorePassword(string appName, string mainPassword)
+        private void GenerateAndStorePassword(string appName, string login, string mainPassword)
         {
             string newPassword = GenerateRandomPassword();
             byte[] encryptedPassword = Encrypt(newPassword, mainPassword);
@@ -32,13 +59,31 @@ namespace PasswordManagerWPF
             {
                 connection.Open();
                 var command = connection.CreateCommand();
-                command.CommandText = "INSERT INTO Passwords (UserID, AppName, EncryptedPassword) VALUES (1, @appName, @encryptedPassword)";
+                command.CommandText = "INSERT INTO Passwords (UserID, AppName, Login, EncryptedPassword) VALUES (1, @appName, @login, @encryptedPassword)";
                 command.Parameters.AddWithValue("@appName", appName);
+                command.Parameters.AddWithValue("@login", login);
                 command.Parameters.AddWithValue("@encryptedPassword", encryptedPassword);
                 command.ExecuteNonQuery();
             }
 
             MessageBox.Show($"Generated password for {appName}: {newPassword}");
+            LoadStoredPasswords(); // Refresh the list
+        }
+
+        private void PasswordListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (PasswordListBox.SelectedItem is ListBoxItem selectedItem)
+            {
+                int passwordId = (int)selectedItem.Tag;
+                OpenAppDetailsWindow(passwordId);
+            }
+        }
+
+        private void OpenAppDetailsWindow(int passwordId)
+        {
+            AppDetailsWindow appDetailsWindow = new AppDetailsWindow(passwordId, mainPassword, connectionString);
+            appDetailsWindow.Closed += (s, e) => LoadStoredPasswords();
+            appDetailsWindow.ShowDialog();
         }
 
         private string GenerateRandomPassword()
@@ -58,34 +103,6 @@ namespace PasswordManagerWPF
             }
 
             return res.ToString();
-        }
-
-        private void ViewPasswords_Click(object sender, RoutedEventArgs e)
-        {
-            ViewStoredPasswords(mainPassword);
-        }
-
-        private void ViewStoredPasswords(string mainPassword)
-        {
-            using (var connection = new SqliteConnection(connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = "SELECT AppName, EncryptedPassword FROM Passwords WHERE UserID = 1";
-                using (var reader = command.ExecuteReader())
-                {
-                    PasswordListBox.Items.Clear();
-                    while (reader.Read())
-                    {
-                        string appName = reader.GetString(0);
-                        byte[] encryptedPassword = (byte[])reader[1];
-                        string decryptedPassword = Decrypt(encryptedPassword, mainPassword);
-
-                        PasswordListBox.Items.Add($"App: {appName}, Password: {decryptedPassword}");
-                    }
-                }
-            }
         }
 
         private byte[] Encrypt(string text, string password)
