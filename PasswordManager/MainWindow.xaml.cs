@@ -58,7 +58,7 @@ namespace PasswordManagerWPF
                 if (result == null)
                 {
                     // Prompt user to set a new password
-                    MessageBox.Show("No main password set. Please set a new main password.");
+                    CustomMessageBox.Show("No main password set. Please set a new main password.");
                     var setPasswordWindow = new SetPasswordWindow();
                     if (setPasswordWindow.ShowDialog() == true)
                     {
@@ -69,7 +69,7 @@ namespace PasswordManagerWPF
                         command.CommandText = "INSERT INTO Users (Username, EncryptedConnectionText) VALUES ('admin', @encryptedConnectionText)";
                         command.Parameters.AddWithValue("@encryptedConnectionText", encryptedConnectionText);
                         command.ExecuteNonQuery();
-                        MessageBox.Show("Main password set successfully.");
+                        CustomMessageBox.Show("Main password set successfully.");
                     }
                     else
                     {
@@ -92,14 +92,14 @@ namespace PasswordManagerWPF
             string mainPassword = MainPasswordBox.Password;
             if (AuthenticateUser(mainPassword))
             {
-                MessageBox.Show("Authentication successful!");
+                CustomMessageBox.Show("Authentication successful!");
                 PasswordManagerWindow passwordManagerWindow = new PasswordManagerWindow(mainPassword);
                 passwordManagerWindow.Show();
                 this.Close();
             }
             else
             {
-                MessageBox.Show("Authentication failed!");
+                CustomMessageBox.Show("Authentication failed!");
             }
         }
 

@@ -70,7 +70,7 @@ namespace PasswordManagerWPF
                 command.ExecuteNonQuery();
             }
 
-            MessageBox.Show("Information saved successfully.");
+            CustomMessageBox.Show("Information saved successfully.");
             this.Close();
         }
 
@@ -89,7 +89,7 @@ namespace PasswordManagerWPF
                     command.ExecuteNonQuery();
                 }
 
-                MessageBox.Show("Entry deleted successfully.");
+                CustomMessageBox.Show("Entry deleted successfully.");
                 this.Close();
             }
         }

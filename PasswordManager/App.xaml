@@ -7,7 +7,7 @@
         <Style TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderBrush" Value="#FF707070"/>
-            <Setter Property="Background" Value="#7FDDDDDD"/>
+            <Setter Property="Background" Value="#FF521FE4"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -19,8 +19,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="Purple"/>
-                                <Setter Property="BorderBrush" Value="LightPink"/>
+                                <Setter Property="Background" Value="#FF521AA1"/>
+                                <Setter Property="BorderBrush" Value="#FF521FE4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>

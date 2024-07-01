@@ -66,9 +66,14 @@ namespace PasswordManagerWPF
                 command.ExecuteNonQuery();
             }
 
-            MessageBox.Show($"Generated password for {appName}: {newPassword}");
             LoadStoredPasswords(); // Refresh the list
+
+            PasswordDisplayWindow passwordDisplayWindow = new PasswordDisplayWindow(newPassword);
+            passwordDisplayWindow.ShowDialog();
         }
+
+
+
 
         private void PasswordListBox_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {

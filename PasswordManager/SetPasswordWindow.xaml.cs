@@ -30,7 +30,7 @@ namespace PasswordManagerWPF
             }
             else
             {
-                MessageBox.Show("Passwords do not match. Please try again.");
+                CustomMessageBox.Show("Passwords do not match. Please try again.");
             }
         }
     }
