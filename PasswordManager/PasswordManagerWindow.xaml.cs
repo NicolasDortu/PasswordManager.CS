@@ -46,9 +46,24 @@ namespace PasswordManagerWPF
         private void GeneratePassword_Click(object sender, RoutedEventArgs e)
         {
             string appName = Microsoft.VisualBasic.Interaction.InputBox("Enter the app name:", "App Name", "Default");
+
+            // Check if the user canceled the input
+            if (string.IsNullOrWhiteSpace(appName))
+            {
+                return; // Exit if the user canceled the input
+            }
+
             string login = Microsoft.VisualBasic.Interaction.InputBox("Enter the login (optional):", "Login", "");
+
+            // Check if the user canceled the input
+            if (login == null)
+            {
+                return; // Exit if the user canceled the input
+            }
+
             GenerateAndStorePassword(appName, login, mainPassword);
         }
+
 
         private void GenerateAndStorePassword(string appName, string login, string mainPassword)
         {
